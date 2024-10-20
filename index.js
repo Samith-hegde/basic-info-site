@@ -1,38 +1,36 @@
-const http = require('http');
 const fs = require('fs/promises');
+const express = require('express');
 
-async function readFile(page) {
-    const data = await fs.readFile(page, 'utf-8');
-    return data;
+const app = express();
+
+const serveHTML = async (res, filename) => {
+    try {
+        const data = await fs.readFile(filename, 'utf8');
+        res.send(data);
+    } catch (err) {
+        res.status(500).send('Internal Server Error');
+    }
 }
 
-function writeHTML(res, page) {
-    readFile(page)
-        .then(data => {
-            res.writeHead(200, {'Content-Type': 'text/html'});
-            res.write(data);
-            res.end();
-        })
-}
+const routeMapping = {
+    '/': 'index.html',
+    '/about': 'about.html',
+    '/contact-me': 'contact-me.html'
+};
 
-const server = http.createServer((req, res) => {
-    const url = req.url;
-    const mapping = {
-        '/': 'index.html',
-        '/about': 'about.html',
-        '/contact-me': 'contact-me.html'
-    }
-
-    const page = mapping[url];
-    if (page) {
-        writeHTML(res, page);
-    } else {
-        writeHTML(res, '404.html');
-    }
-        
-})
-
-server.listen(8080, () => {
-    console.log('Server is running on http://localhost:8080');
+Object.keys(routeMapping).forEach(route => {
+    app.get(route, async (req, res) => {
+        serveHTML(res, routeMapping[route]);
+    })
 });
+
+app.use(async (req, res) => {
+    const data = await fs.readFile('404.html', 'utf-8');
+    res.status(404).send(data);
+});
+
+app.listen(3000, () => {
+    console.log('Server is running on port 3000');
+});
+
 
